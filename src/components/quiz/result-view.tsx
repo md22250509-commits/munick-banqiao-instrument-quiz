@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { LessonClip } from "@/components/quiz/lesson-clip";
 import { ShareButtons } from "@/components/quiz/share-buttons";
 import { SiteFooter } from "@/components/quiz/site-footer";
@@ -55,24 +54,23 @@ export function ResultView({
           ))}
         </div>
 
-        <Button
-          nativeButton={false}
-          render={<a href={formUrl} target="_blank" rel="noopener noreferrer" />}
-          className="mt-8 h-16 w-full rounded-[1.5rem] bg-[#E07A5F] text-xl font-black text-white hover:bg-[#d56b50]"
+        <a
+          href={formUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-8 inline-flex h-16 w-full items-center justify-center rounded-[1.5rem] bg-[#E07A5F] text-xl font-black text-white hover:bg-[#d56b50]"
         >
           預約課程
-        </Button>
-        <Button
-          nativeButton={false}
-          variant="outline"
-          render={
-            <a href={school.lineUrl} target="_blank" rel="noopener noreferrer" />
-          }
-          className="mt-3 h-14 w-full rounded-[1.5rem] border-2 border-[#06C755] bg-white text-lg font-bold text-[#06C755] hover:bg-[#f0fff6]"
+        </a>
+        <a
+          href={school.lineUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex h-14 w-full items-center justify-center gap-2 rounded-[1.5rem] border-2 border-[#06C755] bg-white text-lg font-bold text-[#06C755] hover:bg-[#f0fff6]"
         >
           <MessageCircle className="size-5" />
           用 LINE 問老師
-        </Button>
+        </a>
 
         <div className="mt-6">
           <p className="mb-3 text-center text-base font-semibold text-[#6B5348]">

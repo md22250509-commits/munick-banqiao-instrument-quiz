@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { HeroArt } from "@/components/illustrations";
 import { school } from "@/lib/quiz-data";
