@@ -41,7 +41,8 @@ export const SCHOOL = {
     encodeURIComponent("新北市板橋區中正路325巷47號1樓"),
 } as const;
 
-export type AgeId = "under3" | "3-5" | "6-7" | "8-12" | "13plus";
+export type AgeId = "pre" | "g1" | "g23" | "g46" | "junior";
+export type WishId = "self" | "family";
 export type PersonalityId =
   | "lively"
   | "shy"
@@ -62,7 +63,11 @@ export type Answers = {
   hear: HearId;
   music: MusicId;
   reason: ReasonId;
+  wish: WishId;
 };
+
+export const DRUMS_NOTE =
+  "其實我們覺得每個孩子都很適合從爵士鼓開始，因為一切都從節奏開始。";
 
 type Option = {
   id: string;
@@ -79,12 +84,31 @@ export type Question = {
   options: Option[];
 };
 
-const AGES: { id: AgeId; label: string; formAge: string; years: number }[] = [
-  { id: "under3", label: "還不到 3 歲", formAge: "未滿3歲", years: 2 },
-  { id: "3-5", label: "3–5 歲", formAge: "3-5歲", years: 4 },
-  { id: "6-7", label: "6–7 歲", formAge: "6-7歲", years: 6 },
-  { id: "8-12", label: "8–12 歲", formAge: "8-12歲", years: 10 },
-  { id: "13plus", label: "13 歲以上", formAge: "13歲以上", years: 13 },
+const AGES: {
+  id: AgeId;
+  label: string;
+  formAge: string;
+  years: number;
+  grade: number;
+}[] = [
+  { id: "pre", label: "還沒上小學", formAge: "未上小學", years: 5, grade: 0 },
+  { id: "g1", label: "一年級", formAge: "一年級", years: 7, grade: 1 },
+  { id: "g23", label: "二、三年級", formAge: "二、三年級", years: 9, grade: 2 },
+  { id: "g46", label: "四年級到六年級", formAge: "四年級到六年級", years: 11, grade: 4 },
+  { id: "junior", label: "國中以上", formAge: "國中以上", years: 13, grade: 7 },
+];
+
+const WISHES: { id: WishId; label: string; hint: string }[] = [
+  {
+    id: "self",
+    label: "孩子自己主動想學",
+    hint: "是他開口說想彈、想唱",
+  },
+  {
+    id: "family",
+    label: "家長想讓他試試看",
+    hint: "我們覺得可以先接觸看看",
+  },
 ];
 
 const PERSONALITIES: { id: PersonalityId; label: string; form: string }[] = [
@@ -140,7 +164,7 @@ const REASONS: { id: ReasonId; label: string; hint: string; form: string }[] = [
 export const QUESTIONS: Question[] = [
   {
     field: "age",
-    title: "孩子現在幾歲？",
+    title: "孩子現在幾年級？",
     image: "/illustrations/q-age.jpg",
     alt: "三個不同身高的孩子，有人拿小鼓、有人拿音符、有人抱著吉他",
     columns: 1,
@@ -194,6 +218,18 @@ export const QUESTIONS: Question[] = [
       hint: item.hint,
     })),
   },
+  {
+    field: "wish",
+    title: "這次學音樂，是誰比較想？",
+    image: "/illustrations/q-reason.jpg",
+    alt: "孩子坐在有植物的房間裡，自己伸手去摸樂器",
+    columns: 1,
+    options: WISHES.map((item) => ({
+      id: item.id,
+      label: item.label,
+      hint: item.hint,
+    })),
+  },
 ];
 
 type CourseOption = { form: string; minYears: number };
@@ -204,6 +240,7 @@ export const INSTRUMENTS: Record<
     id: InstrumentId;
     name: string;
     blurb: string;
+    observation: string;
     image: string;
     alt: string;
     courses: CourseOption[];
@@ -213,6 +250,7 @@ export const INSTRUMENTS: Record<
     id: "drums",
     name: "爵士鼓",
     blurb: "節奏一出來，整個人就亮了。敲下去的那一下，常常是孩子最開心的時刻。",
+    observation: "平常喜歡敲敲打打，看到別人打鼓的影片眼睛會一直盯著看的孩子很適合。",
     image: "/illustrations/inst-drums.jpg",
     alt: "孩子坐在爵士鼓前面，高舉鼓棒笑著",
     courses: [{ form: COURSE_LABEL.drums, minYears: 3 }],
@@ -220,8 +258,9 @@ export const INSTRUMENTS: Record<
   guitar: {
     id: "guitar",
     name: "吉他（木吉他／電吉他）",
-    blurb:
-      "一首歌可以在手裡慢慢長出來。木吉他溫柔，電吉他有勁，兩種都可以先摸摸看。",
+    blurb: "一首歌可以在手裡慢慢長出來。木吉他溫柔，電吉他比較有勁。",
+    observation:
+      "建議二、三年級以上，最小大概一年級。孩子要很有想法、很有主見，是真的自己想彈。",
     image: "/illustrations/inst-guitar.jpg",
     alt: "孩子抱著木吉他，旁邊靠著一把電吉他",
     courses: [
@@ -233,6 +272,7 @@ export const INSTRUMENTS: Record<
     id: "bass",
     name: "Bass 電貝斯",
     blurb: "聲音低調，卻把整首歌撐住。喜歡把事情做穩的孩子，常常會愛上這個角色。",
+    observation: "喜歡聽歌時跟著低音搖頭、願意在團裡默默撐場的孩子。",
     image: "/illustrations/inst-bass.jpg",
     alt: "孩子抱著電貝斯，安靜地笑",
     courses: [{ form: COURSE_LABEL.bass, minYears: 8 }],
@@ -241,6 +281,7 @@ export const INSTRUMENTS: Record<
     id: "vocal",
     name: "歌唱",
     blurb: "用自己的聲音說故事。不用先會樂器，開口唱，就是開始。",
+    observation: "適合平常喜歡唱歌、對旋律比較敏感的孩子。",
     image: "/illustrations/inst-vocal.jpg",
     alt: "孩子拿著麥克風開心地唱歌，周圍有音符和愛心",
     courses: [{ form: COURSE_LABEL.vocal, minYears: 3 }],
@@ -249,15 +290,12 @@ export const INSTRUMENTS: Record<
     id: "piano",
     name: "鋼琴（流行鋼琴）",
     blurb: "一個人也能把一首歌彈完整。按下去就有聲音，很適合邊玩邊找感覺。",
+    observation: "適合平常喜歡唱歌、對旋律比較敏感的孩子。",
     image: "/illustrations/inst-piano.jpg",
     alt: "孩子坐在彩色鍵盤前，雙手按著琴鍵",
     courses: [{ form: COURSE_LABEL.piano, minYears: 3 }],
   },
 };
-
-const INSTRUMENT_IDS = Object.keys(INSTRUMENTS) as InstrumentId[];
-
-const TIE_ORDER: InstrumentId[] = ["piano", "vocal", "guitar", "drums", "bass"];
 
 function byId<T extends { id: string }>(list: T[], id: string): T {
   const found = list.find((item) => item.id === id);
@@ -271,82 +309,84 @@ export function ageProfile(id: AgeId) {
   return byId(AGES, id);
 }
 
-function add(scores: Record<InstrumentId, number>, partial: Partial<Record<InstrumentId, number>>) {
-  for (const id of INSTRUMENT_IDS) {
-    scores[id] += partial[id] ?? 0;
-  }
+/** 喜歡唱歌，或聽到音樂會跟著唱，都算對旋律敏感。 */
+export function likesMelody(answers: Answers): boolean {
+  return answers.play === "sing" || answers.hear === "singalong";
+}
+
+/** 吉他只給一年級以上、而且是孩子自己開口想學的情況。 */
+export function allowGuitar(answers: Answers): boolean {
+  return ageProfile(answers.age).grade >= 1 && answers.wish === "self";
 }
 
 export function recommend(answers: Answers): InstrumentId[] {
-  const scores = {
-    drums: 0,
-    guitar: 0,
-    bass: 0,
-    vocal: 0,
-    piano: 0,
-  };
+  const profile = ageProfile(answers.age);
+  const guitarOk = allowGuitar(answers);
 
-  const play: Record<PlayId, Partial<Record<InstrumentId, number>>> = {
-    hit: { drums: 6, piano: 1 },
-    sing: { vocal: 6, piano: 1, guitar: 1 },
-    keys: { piano: 6, vocal: 1 },
-    strings: { guitar: 5, bass: 4 },
-  };
-  const hear: Record<HearId, Partial<Record<InstrumentId, number>>> = {
-    beat: { drums: 3, bass: 2 },
-    singalong: { vocal: 3, piano: 1, guitar: 1 },
-    dance: { drums: 2, vocal: 2, guitar: 1 },
-    quiet: { piano: 3, guitar: 2, bass: 1 },
-  };
-  const personality: Record<PersonalityId, Partial<Record<InstrumentId, number>>> = {
-    lively: { drums: 2, vocal: 2, guitar: 1 },
-    shy: { piano: 2, guitar: 2, bass: 1 },
-    mature: { piano: 2, bass: 2, guitar: 1 },
-    childlike: { drums: 2, vocal: 2, piano: 1 },
-    sincere: { bass: 2, piano: 2, guitar: 1 },
-    clever: { piano: 2, guitar: 2, bass: 1, vocal: 1 },
-  };
-  const music: Record<MusicId, Partial<Record<InstrumentId, number>>> = {
-    classical: { piano: 3, guitar: 2, vocal: 1 },
-    mandopop: { guitar: 2, vocal: 2, piano: 2 },
-    anime: { vocal: 2, piano: 2, guitar: 1 },
-    kpop: { vocal: 3, piano: 2, drums: 1 },
-    rock: { drums: 3, guitar: 3, bass: 2 },
-  };
-  const reason: Record<ReasonId, Partial<Record<InstrumentId, number>>> = {
-    explore: { drums: 1, bass: 1, guitar: 1 },
-    relax: { piano: 2, guitar: 2, vocal: 1 },
-  };
+  if (likesMelody(answers)) {
+    return ["vocal", "piano", "drums"];
+  }
 
-  add(scores, play[answers.play]);
-  add(scores, hear[answers.hear]);
-  add(scores, personality[answers.personality]);
-  add(scores, music[answers.music]);
-  add(scores, reason[answers.reason]);
+  const others: InstrumentId[] = [];
+  const lowEnd = answers.hear === "beat" || answers.music === "rock";
 
-  const years = ageProfile(answers.age).years;
-  const suggestedStart: Record<InstrumentId, number> = {
-    drums: 3,
-    vocal: 3,
-    piano: 3,
-    guitar: 6,
-    bass: 8,
-  };
-  for (const id of INSTRUMENT_IDS) {
-    if (years < suggestedStart[id]) {
-      scores[id] -= (suggestedStart[id] - years) * 1.5;
+  if (answers.play === "strings") {
+    if (guitarOk) {
+      others.push("guitar");
+      if (lowEnd && profile.years >= 8) {
+        others.push("bass");
+      } else if (answers.hear === "quiet" || answers.music === "classical") {
+        others.push("piano");
+      } else {
+        others.push("vocal");
+      }
+    } else {
+      others.push("vocal");
+    }
+  } else if (answers.play === "keys") {
+    others.push("piano");
+    if (
+      answers.music === "kpop" ||
+      answers.music === "anime" ||
+      answers.music === "mandopop"
+    ) {
+      others.push("vocal");
+    } else if (guitarOk && answers.music === "rock") {
+      others.push("guitar");
+    } else if (lowEnd && profile.years >= 8) {
+      others.push("bass");
+    } else {
+      others.push("vocal");
+    }
+  } else {
+    if (guitarOk && answers.music === "rock") {
+      others.push("guitar");
+    }
+    if (lowEnd && profile.years >= 8 && others.length < 2) {
+      others.push("bass");
+    }
+    if (others.length === 0) {
+      others.push("vocal");
+    }
+    if (
+      others.length < 2 &&
+      (answers.personality === "shy" ||
+        answers.hear === "quiet" ||
+        answers.music === "classical")
+    ) {
+      others.push("piano");
     }
   }
 
-  const ranked = [...INSTRUMENT_IDS].sort(
-    (a, b) => scores[b] - scores[a] || TIE_ORDER.indexOf(a) - TIE_ORDER.indexOf(b),
-  );
-  const third = ranked[2];
-  const second = ranked[1];
-  if (scores[third] >= scores[second] - 2) {
-    return ranked.slice(0, 3);
+  const picked = [...new Set(others)]
+    .filter((id) => id !== "drums" && (id !== "guitar" || guitarOk))
+    .slice(0, 2);
+
+  if (picked.length === 0) {
+    picked.push("vocal");
   }
-  return ranked.slice(0, 2);
+
+  return [...picked, "drums"];
 }
 
 /** 年齡還小、但仍然想先讓老師知道的方向，表單上會勾建議年齡較低的那一項。 */
@@ -396,6 +436,7 @@ const QUERY_KEYS = {
   hear: "h",
   music: "m",
   reason: "r",
+  wish: "w",
 } as const;
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -418,17 +459,19 @@ export function parseAnswers(
   const hear = first(sp[QUERY_KEYS.hear]);
   const music = first(sp[QUERY_KEYS.music]);
   const reason = first(sp[QUERY_KEYS.reason]);
+  const wish = first(sp[QUERY_KEYS.wish]);
   if (
     !isId(AGES, age) ||
     !isId(PERSONALITIES, personality) ||
     !isId(PLAYS, play) ||
     !isId(HEARS, hear) ||
     !isId(MUSICS, music) ||
-    !isId(REASONS, reason)
+    !isId(REASONS, reason) ||
+    !isId(WISHES, wish)
   ) {
     return null;
   }
-  return { age, personality, play, hear, music, reason };
+  return { age, personality, play, hear, music, reason, wish };
 }
 
 export function hasQuizParams(sp: Record<string, string | string[] | undefined>): boolean {
@@ -443,6 +486,7 @@ export function toQuery(answers: Answers): string {
   params.set(QUERY_KEYS.hear, answers.hear);
   params.set(QUERY_KEYS.music, answers.music);
   params.set(QUERY_KEYS.reason, answers.reason);
+  params.set(QUERY_KEYS.wish, answers.wish);
   return `?${params.toString()}`;
 }
 

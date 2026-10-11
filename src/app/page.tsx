@@ -11,7 +11,7 @@ export async function generateMetadata({
     return {
       title: "孩子適合什麼樂器？｜慕尼克音樂板橋",
       description:
-        "六個小問題，大約一分鐘。幫家長找找孩子可能會喜歡的樂器，再預約慕尼克音樂新北板橋校區的課程。",
+        "七個小問題，大約一分鐘。幫家長找找孩子可能會喜歡的樂器，再預約慕尼克音樂新北板橋校區的課程。",
     };
   }
   const names = recommend(answers).map((id) => INSTRUMENTS[id].name);

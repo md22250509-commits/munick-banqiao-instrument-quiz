@@ -10,6 +10,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { classClips } from "@/lib/clips";
 import { cn } from "@/lib/utils";
 import {
+  DRUMS_NOTE,
   INSTRUMENTS,
   LINE_TEACHER_URL,
   QUESTIONS,
@@ -204,7 +205,7 @@ function Intro({
       </figure>
       <h1 className="mt-5 text-[2rem] leading-tight font-black">孩子適合什麼樂器？</h1>
       <p className="mt-3 text-lg leading-relaxed">
-        不是幫孩子下定論。六個小問題，大約一分鐘，先找找他可能玩得開心的方向。
+        不是幫孩子下定論。七個小問題，大約一分鐘，先找找他可能玩得開心的方向。
       </p>
       <Button
         type="button"
@@ -249,6 +250,10 @@ function Result({
                 </figure>
                 <h2 className="mt-4 text-2xl font-black">{instrument.name}</h2>
                 <p className="mt-2 text-lg leading-relaxed">{instrument.blurb}</p>
+                <div className="mt-4 rounded-2xl bg-[#FFF6EC] px-4 py-3">
+                  <p className="text-sm font-black tracking-wide text-[#E15B48]">老師觀察</p>
+                  <p className="mt-1 text-lg leading-relaxed">{instrument.observation}</p>
+                </div>
                 <div className="mt-4">
                   <ClassClip
                     src={classClips[id]}
@@ -268,6 +273,7 @@ function Result({
             報名表上有的課寫了建議年齡。老師會先看孩子的狀況，再一起決定怎麼試。
           </p>
         ) : null}
+        <p className="mt-4 text-lg leading-relaxed font-medium">{DRUMS_NOTE}</p>
         <div className="mt-5 flex flex-col gap-3">
           <a
             href={formUrl}
