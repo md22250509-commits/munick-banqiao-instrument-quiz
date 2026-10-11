@@ -39,6 +39,7 @@ describe("recommend", () => {
                   assert.ok(picks.length === 2 || picks.length === 3);
                   assert.equal(new Set(picks).size, picks.length);
                   assert.equal(picks.at(-1), "drums");
+                  assert.equal((picks as string[]).includes("bass"), false);
                   const guitarAllowed = age !== "pre" && wish === "self";
                   if (!guitarAllowed) {
                     assert.equal(picks.includes("guitar"), false);
@@ -85,19 +86,20 @@ describe("recommend", () => {
     assert.equal(picks.at(-1), "drums");
   });
 
-  it("includes guitar and bass when an older child who wants to learn loves rock and strings", () => {
-    const picks = recommend(
-      answers({
-        age: "g46",
-        personality: "lively",
-        play: "strings",
-        hear: "beat",
-        music: "rock",
-        reason: "explore",
-        wish: "self",
-      }),
-    );
-    assert.deepEqual(picks, ["guitar", "bass", "drums"]);
+  it("keeps bass inside the guitar card when an older child wants to play strings", () => {
+    const sample = answers({
+      age: "g46",
+      personality: "lively",
+      play: "strings",
+      hear: "beat",
+      music: "rock",
+      reason: "explore",
+      wish: "self",
+    });
+    const picks = recommend(sample);
+    assert.deepEqual(picks, ["guitar", "vocal", "drums"]);
+    assert.equal(picks.includes("bass" as "guitar"), false);
+    assert.ok(coursesFor(picks, 11).includes(COURSE_LABEL.bass));
   });
 
   it("swaps guitar for singing when the grade is too young", () => {
@@ -169,19 +171,21 @@ describe("teacher notes", () => {
       INSTRUMENTS.drums.observation,
       "平常喜歡敲敲打打，看到別人打鼓的影片眼睛會一直盯著看的孩子很適合。",
     );
+    assert.equal(INSTRUMENTS.guitar.name, "木吉他／電吉他／Bass（低音吉他）");
     assert.equal(
       INSTRUMENTS.guitar.observation,
       "建議二、三年級以上，最小大概一年級。孩子要很有想法、很有主見，是真的自己想彈。",
     );
+    const notes = Object.values(INSTRUMENTS)
+      .map((item) => `${item.name}\n${item.observation}`)
+      .join("\n");
+    assert.equal(notes.includes("跟著低音搖頭"), false);
+    assert.equal(notes.includes("默默撐場"), false);
     assert.equal(
       INSTRUMENTS.vocal.observation,
       "適合平常喜歡唱歌、對旋律比較敏感的孩子。",
     );
     assert.equal(INSTRUMENTS.piano.observation, INSTRUMENTS.vocal.observation);
-    assert.equal(
-      INSTRUMENTS.bass.observation,
-      "喜歡聽歌時跟著低音搖頭、願意在團裡默默撐場的孩子。",
-    );
     assert.equal(
       DRUMS_NOTE,
       "其實我們覺得每個孩子都很適合從爵士鼓開始，因為一切都從節奏開始。",
@@ -190,11 +194,16 @@ describe("teacher notes", () => {
 });
 
 describe("form prefill", () => {
-  it("checks both guitars once the child is 8 or older", () => {
+  it("checks both guitars and bass once the child is 8 or older", () => {
     assert.deepEqual(coursesFor(["guitar"], 10), [
       COURSE_LABEL.acoustic,
       COURSE_LABEL.electric,
+      COURSE_LABEL.bass,
     ]);
+  });
+
+  it("leaves bass off the form for a first grader", () => {
+    assert.deepEqual(coursesFor(["guitar"], 7), [COURSE_LABEL.electric]);
   });
 
   it("checks only electric guitar between 6 and 7", () => {
@@ -224,12 +233,16 @@ describe("form prefill", () => {
     assert.deepEqual(url.searchParams.getAll("entry.1084453381"), [
       COURSE_LABEL.acoustic,
       COURSE_LABEL.electric,
+      COURSE_LABEL.bass,
       COURSE_LABEL.piano,
       COURSE_LABEL.vocal,
     ]);
     assert.equal(COURSE_LABEL.acoustic, "木吉他 Acoustic guitar  8y以上");
     assert.match(url.toString(), /%26|&/);
-    assert.equal(url.searchParams.getAll("entry.1084453381")[2]?.includes("&"), true);
+    assert.equal(
+      url.searchParams.getAll("entry.1084453381").some((value) => value.includes("&")),
+      true,
+    );
     assert.doesNotMatch(url.toString(), /免費/);
   });
 });

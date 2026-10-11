@@ -248,7 +248,7 @@ function Result({
                     className="object-cover"
                   />
                 </figure>
-                <h2 className="mt-4 text-2xl font-black">{instrument.name}</h2>
+                <h2 className="mt-4 text-2xl leading-snug font-black">{instrument.name}</h2>
                 <p className="mt-2 text-lg leading-relaxed">{instrument.blurb}</p>
                 <div className="mt-4 rounded-2xl bg-[#FFF6EC] px-4 py-3">
                   <p className="text-sm font-black tracking-wide text-[#E15B48]">老師觀察</p>

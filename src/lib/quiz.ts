@@ -54,7 +54,7 @@ export type PlayId = "hit" | "sing" | "keys" | "strings";
 export type HearId = "beat" | "singalong" | "dance" | "quiet";
 export type MusicId = "classical" | "mandopop" | "anime" | "kpop" | "rock";
 export type ReasonId = "explore" | "relax";
-export type InstrumentId = "drums" | "guitar" | "bass" | "vocal" | "piano";
+export type InstrumentId = "drums" | "guitar" | "vocal" | "piano";
 
 export type Answers = {
   age: AgeId;
@@ -257,8 +257,8 @@ export const INSTRUMENTS: Record<
   },
   guitar: {
     id: "guitar",
-    name: "吉他（木吉他／電吉他）",
-    blurb: "一首歌可以在手裡慢慢長出來。木吉他溫柔，電吉他比較有勁。",
+    name: "木吉他／電吉他／Bass（低音吉他）",
+    blurb: "一首歌可以在手裡慢慢長出來。木吉他溫柔，電吉他比較有勁，Bass 把低音補上。",
     observation:
       "建議二、三年級以上，最小大概一年級。孩子要很有想法、很有主見，是真的自己想彈。",
     image: "/illustrations/inst-guitar.jpg",
@@ -266,16 +266,8 @@ export const INSTRUMENTS: Record<
     courses: [
       { form: COURSE_LABEL.acoustic, minYears: 8 },
       { form: COURSE_LABEL.electric, minYears: 6 },
+      { form: COURSE_LABEL.bass, minYears: 8 },
     ],
-  },
-  bass: {
-    id: "bass",
-    name: "Bass 電貝斯",
-    blurb: "聲音低調，卻把整首歌撐住。喜歡把事情做穩的孩子，常常會愛上這個角色。",
-    observation: "喜歡聽歌時跟著低音搖頭、願意在團裡默默撐場的孩子。",
-    image: "/illustrations/inst-bass.jpg",
-    alt: "孩子抱著電貝斯，安靜地笑",
-    courses: [{ form: COURSE_LABEL.bass, minYears: 8 }],
   },
   vocal: {
     id: "vocal",
@@ -314,13 +306,12 @@ export function likesMelody(answers: Answers): boolean {
   return answers.play === "sing" || answers.hear === "singalong";
 }
 
-/** 吉他只給一年級以上、而且是孩子自己開口想學的情況。 */
+/** 吉他和 Bass 只給一年級以上、而且是孩子自己開口想學的情況。 */
 export function allowGuitar(answers: Answers): boolean {
   return ageProfile(answers.age).grade >= 1 && answers.wish === "self";
 }
 
 export function recommend(answers: Answers): InstrumentId[] {
-  const profile = ageProfile(answers.age);
   const guitarOk = allowGuitar(answers);
 
   if (likesMelody(answers)) {
@@ -328,14 +319,11 @@ export function recommend(answers: Answers): InstrumentId[] {
   }
 
   const others: InstrumentId[] = [];
-  const lowEnd = answers.hear === "beat" || answers.music === "rock";
 
   if (answers.play === "strings") {
     if (guitarOk) {
       others.push("guitar");
-      if (lowEnd && profile.years >= 8) {
-        others.push("bass");
-      } else if (answers.hear === "quiet" || answers.music === "classical") {
+      if (answers.hear === "quiet" || answers.music === "classical") {
         others.push("piano");
       } else {
         others.push("vocal");
@@ -353,17 +341,12 @@ export function recommend(answers: Answers): InstrumentId[] {
       others.push("vocal");
     } else if (guitarOk && answers.music === "rock") {
       others.push("guitar");
-    } else if (lowEnd && profile.years >= 8) {
-      others.push("bass");
     } else {
       others.push("vocal");
     }
   } else {
     if (guitarOk && answers.music === "rock") {
       others.push("guitar");
-    }
-    if (lowEnd && profile.years >= 8 && others.length < 2) {
-      others.push("bass");
     }
     if (others.length === 0) {
       others.push("vocal");
