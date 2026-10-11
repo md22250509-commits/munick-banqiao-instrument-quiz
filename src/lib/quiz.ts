@@ -50,7 +50,7 @@ export type PersonalityId =
   | "childlike"
   | "sincere"
   | "clever";
-export type PlayId = "hit" | "sing" | "keys" | "strings";
+export type PlayId = "hit" | "sing" | "keys";
 export type HearId = "beat" | "singalong" | "dance" | "quiet";
 export type MusicId = "classical" | "mandopop" | "anime" | "kpop" | "rock";
 export type ReasonId = "explore" | "relax";
@@ -124,7 +124,6 @@ const PLAYS: { id: PlayId; label: string; hint: string }[] = [
   { id: "hit", label: "敲敲打打", hint: "鼓、節奏、敲東西" },
   { id: "sing", label: "唱歌", hint: "哼歌、跟著旋律" },
   { id: "keys", label: "按按鍵", hint: "鍵盤、按鈕、一格一格" },
-  { id: "strings", label: "撥弦", hint: "吉他、撥來撥去" },
 ];
 
 const HEARS: { id: HearId; label: string }[] = [
@@ -306,70 +305,45 @@ export function likesMelody(answers: Answers): boolean {
   return answers.play === "sing" || answers.hear === "singalong";
 }
 
-/** 吉他和 Bass 只給一年級以上、而且是孩子自己開口想學的情況。 */
+/** 吉他和 Bass 只看年級與第 7 題，兩個條件都要符合。 */
 export function allowGuitar(answers: Answers): boolean {
   return ageProfile(answers.age).grade >= 1 && answers.wish === "self";
 }
 
+/** 敲敲打打，或聽到音樂會跟著打拍子，爵士鼓排第一。 */
+export function prefersRhythm(answers: Answers): boolean {
+  return answers.play === "hit" || answers.hear === "beat";
+}
+
 export function recommend(answers: Answers): InstrumentId[] {
   const guitarOk = allowGuitar(answers);
-
-  if (likesMelody(answers)) {
-    return ["vocal", "piano", "drums"];
-  }
-
   const others: InstrumentId[] = [];
 
-  if (answers.play === "strings") {
-    if (guitarOk) {
-      others.push("guitar");
-      if (answers.hear === "quiet" || answers.music === "classical") {
-        others.push("piano");
-      } else {
-        others.push("vocal");
-      }
-    } else {
-      others.push("vocal");
-    }
+  if (likesMelody(answers)) {
+    others.push("vocal", "piano");
   } else if (answers.play === "keys") {
     others.push("piano");
-    if (
-      answers.music === "kpop" ||
-      answers.music === "anime" ||
-      answers.music === "mandopop"
-    ) {
+    if (!guitarOk) {
       others.push("vocal");
-    } else if (guitarOk && answers.music === "rock") {
-      others.push("guitar");
-    } else {
+    }
+  } else if (
+    answers.personality === "shy" ||
+    answers.hear === "quiet" ||
+    answers.music === "classical"
+  ) {
+    others.push("piano");
+    if (!guitarOk) {
       others.push("vocal");
     }
   } else {
-    if (guitarOk && answers.music === "rock") {
-      others.push("guitar");
-    }
-    if (others.length === 0) {
-      others.push("vocal");
-    }
-    if (
-      others.length < 2 &&
-      (answers.personality === "shy" ||
-        answers.hear === "quiet" ||
-        answers.music === "classical")
-    ) {
-      others.push("piano");
-    }
+    others.push("vocal");
   }
 
-  const picked = [...new Set(others)]
-    .filter((id) => id !== "drums" && (id !== "guitar" || guitarOk))
-    .slice(0, 2);
-
-  if (picked.length === 0) {
-    picked.push("vocal");
+  if (guitarOk) {
+    others.push("guitar");
   }
 
-  return [...picked, "drums"];
+  return prefersRhythm(answers) ? ["drums", ...others] : [...others, "drums"];
 }
 
 /** 年齡還小、但仍然想先讓老師知道的方向，表單上會勾建議年齡較低的那一項。 */

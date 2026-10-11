@@ -14,7 +14,7 @@ import type { Answers } from "./quiz.ts";
 
 const ALL_AGES = ["pre", "g1", "g23", "g46", "junior"] as const;
 const ALL_PERSONALITIES = ["lively", "shy", "mature", "childlike", "sincere", "clever"] as const;
-const ALL_PLAYS = ["hit", "sing", "keys", "strings"] as const;
+const ALL_PLAYS = ["hit", "sing", "keys"] as const;
 const ALL_HEARS = ["beat", "singalong", "dance", "quiet"] as const;
 const ALL_MUSICS = ["classical", "mandopop", "anime", "kpop", "rock"] as const;
 const ALL_REASONS = ["explore", "relax"] as const;
@@ -25,7 +25,7 @@ function answers(partial: Answers): Answers {
 }
 
 describe("recommend", () => {
-  it("always includes drums last, and returns two or three instruments", () => {
+  it("includes drums, and guitar only when grade and self-motivation both match", () => {
     for (const age of ALL_AGES) {
       for (const personality of ALL_PERSONALITIES) {
         for (const play of ALL_PLAYS) {
@@ -36,13 +36,20 @@ describe("recommend", () => {
                   const picks = recommend(
                     answers({ age, personality, play, hear, music, reason, wish }),
                   );
-                  assert.ok(picks.length === 2 || picks.length === 3);
+                  assert.ok(picks.length >= 2 && picks.length <= 4);
                   assert.equal(new Set(picks).size, picks.length);
-                  assert.equal(picks.at(-1), "drums");
                   assert.equal((picks as string[]).includes("bass"), false);
                   const guitarAllowed = age !== "pre" && wish === "self";
-                  if (!guitarAllowed) {
-                    assert.equal(picks.includes("guitar"), false);
+                  assert.equal(picks.includes("guitar"), guitarAllowed);
+                  const rhythm = play === "hit" || hear === "beat";
+                  if (rhythm) {
+                    assert.equal(picks[0], "drums");
+                  } else {
+                    assert.equal(picks.at(-1), "drums");
+                  }
+                  if (play === "sing" || hear === "singalong") {
+                    assert.ok(picks.indexOf("vocal") >= 0);
+                    assert.ok(picks.indexOf("vocal") < picks.indexOf("piano"));
                   }
                 }
               }
@@ -65,56 +72,52 @@ describe("recommend", () => {
         wish: "self",
       }),
     );
-    assert.equal(picks[0], "piano");
-    assert.equal(picks.includes("guitar"), false);
-    assert.equal(picks.at(-1), "drums");
+    assert.deepEqual(picks, ["piano", "vocal", "drums"]);
   });
 
-  it("recommends guitar for a first grader who wants to play strings themselves", () => {
+  it("recommends the guitar card for a first grader who wants to learn, even without a strings answer", () => {
     const picks = recommend(
       answers({
         age: "g1",
         personality: "clever",
-        play: "strings",
+        play: "keys",
         hear: "quiet",
         music: "mandopop",
         reason: "explore",
         wish: "self",
       }),
     );
-    assert.equal(picks[0], "guitar");
-    assert.equal(picks.at(-1), "drums");
+    assert.deepEqual(picks, ["piano", "guitar", "drums"]);
   });
 
-  it("keeps bass inside the guitar card when an older child wants to play strings", () => {
+  it("puts drums first and still includes guitar when an older child hits things and keeps the beat", () => {
     const sample = answers({
       age: "g46",
       personality: "lively",
-      play: "strings",
+      play: "hit",
       hear: "beat",
       music: "rock",
       reason: "explore",
       wish: "self",
     });
     const picks = recommend(sample);
-    assert.deepEqual(picks, ["guitar", "vocal", "drums"]);
-    assert.equal(picks.includes("bass" as "guitar"), false);
+    assert.deepEqual(picks, ["drums", "vocal", "guitar"]);
     assert.ok(coursesFor(picks, 11).includes(COURSE_LABEL.bass));
   });
 
-  it("swaps guitar for singing when the grade is too young", () => {
+  it("puts drums first and skips guitar when the grade is too young", () => {
     const picks = recommend(
       answers({
         age: "pre",
         personality: "lively",
-        play: "strings",
+        play: "hit",
         hear: "beat",
         music: "rock",
         reason: "explore",
         wish: "self",
       }),
     );
-    assert.deepEqual(picks, ["vocal", "drums"]);
+    assert.deepEqual(picks, ["drums", "vocal"]);
   });
 
   it("does not recommend guitar when the family wants the child to try, even in junior high", () => {
@@ -122,19 +125,33 @@ describe("recommend", () => {
       answers({
         age: "junior",
         personality: "mature",
-        play: "strings",
+        play: "keys",
         hear: "quiet",
         music: "classical",
         reason: "relax",
         wish: "family",
       }),
     );
-    assert.equal(picks.includes("guitar"), false);
-    assert.ok(picks.includes("vocal"));
-    assert.equal(picks.at(-1), "drums");
+    assert.deepEqual(picks, ["piano", "vocal", "drums"]);
   });
 
-  it("prioritizes singing and pop piano when the child likes to sing", () => {
+  it("puts drums first when the child keeps the beat, even if guitar is not allowed", () => {
+    const picks = recommend(
+      answers({
+        age: "g23",
+        personality: "sincere",
+        play: "keys",
+        hear: "beat",
+        music: "classical",
+        reason: "explore",
+        wish: "family",
+      }),
+    );
+    assert.equal(picks[0], "drums");
+    assert.equal(picks.includes("guitar"), false);
+  });
+
+  it("prioritizes singing and pop piano, and adds guitar when both guitar conditions match", () => {
     const picks = recommend(
       answers({
         age: "junior",
@@ -146,22 +163,37 @@ describe("recommend", () => {
         wish: "self",
       }),
     );
-    assert.deepEqual(picks, ["vocal", "piano", "drums"]);
+    assert.deepEqual(picks, ["vocal", "piano", "guitar", "drums"]);
   });
 
-  it("prioritizes singing and pop piano when the child sings along, even if they also like strings", () => {
+  it("prioritizes singing and pop piano without guitar when the family chose the class", () => {
     const picks = recommend(
       answers({
         age: "g23",
         personality: "clever",
-        play: "strings",
+        play: "keys",
         hear: "singalong",
         music: "mandopop",
         reason: "relax",
-        wish: "self",
+        wish: "family",
       }),
     );
     assert.deepEqual(picks, ["vocal", "piano", "drums"]);
+  });
+
+  it("puts drums first when a child who likes to sing also keeps the beat", () => {
+    const picks = recommend(
+      answers({
+        age: "g1",
+        personality: "lively",
+        play: "sing",
+        hear: "beat",
+        music: "kpop",
+        reason: "explore",
+        wish: "self",
+      }),
+    );
+    assert.deepEqual(picks, ["drums", "vocal", "piano", "guitar"]);
   });
 });
 
@@ -218,7 +250,7 @@ describe("form prefill", () => {
     const sample = answers({
       age: "g23",
       personality: "lively",
-      play: "strings",
+      play: "keys",
       hear: "quiet",
       music: "mandopop",
       reason: "relax",
