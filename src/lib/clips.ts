@@ -7,7 +7,9 @@ import type { InstrumentId } from "@/lib/quiz";
  */
 export const classClips: Record<InstrumentId, string | null> = {
   drums: null,
-  guitar: null,
-  vocal: null,
   piano: null,
+  vocal: null,
+  acoustic: null,
+  bass: null,
+  electric: null,
 };

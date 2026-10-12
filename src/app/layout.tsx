@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "七個小問題，大約一分鐘。幫家長找找孩子可能會喜歡的樂器，再預約慕尼克音樂新北板橋校區的課程。",
+    "八個小問題，大約一分鐘。幫家長找找孩子可能會喜歡的樂器，再預約慕尼克音樂新北板橋校區的課程。",
   openGraph: {
     siteName: "慕尼克音樂 · 新北板橋校區",
     locale: "zh_TW",

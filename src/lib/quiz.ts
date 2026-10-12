@@ -54,7 +54,8 @@ export type PlayId = "hit" | "sing" | "keys";
 export type HearId = "beat" | "singalong" | "dance" | "quiet";
 export type MusicId = "classical" | "mandopop" | "anime" | "kpop" | "rock";
 export type ReasonId = "explore" | "relax";
-export type InstrumentId = "drums" | "guitar" | "vocal" | "piano";
+export type InstrumentId = "drums" | "piano" | "vocal" | "acoustic" | "bass" | "electric";
+export type StyleId = "energy" | "spatial" | "expressive" | "steady" | "cool";
 
 export type Answers = {
   age: AgeId;
@@ -64,6 +65,7 @@ export type Answers = {
   music: MusicId;
   reason: ReasonId;
   wish: WishId;
+  style: StyleId;
 };
 
 export const DRUMS_NOTE =
@@ -96,6 +98,64 @@ const AGES: {
   { id: "g23", label: "二、三年級", formAge: "二、三年級", years: 9, grade: 2 },
   { id: "g46", label: "四年級到六年級", formAge: "四年級到六年級", years: 11, grade: 4 },
   { id: "junior", label: "國中以上", formAge: "國中以上", years: 13, grade: 7 },
+];
+
+const STRING_OBSERVATION =
+  "建議二、三年級以上，最小大概一年級。孩子要很有想法、很有主見，是真的自己想彈。";
+
+export const STYLES: {
+  id: StyleId;
+  label: string;
+  hint: string;
+  daily: string;
+  fits: InstrumentId[];
+  analysis: string;
+}[] = [
+  {
+    id: "energy",
+    label: "動態與肢體能量型",
+    hint: "體力旺盛、手腳停不下來、喜歡跑跳與球類運動",
+    daily: "體力旺盛、手腳停不下來、喜歡跑跳與球類運動。",
+    fits: ["drums"],
+    analysis:
+      "這類孩子需要具備即時物理反饋、高能量釋放的管道。爵士鼓講求四肢協調與大肌肉帶動小肌肉的節奏感，不需要先背大量音符就能透過「打擊與發聲」立刻獲得強烈正向回饋，最能接住精力充沛的孩子。",
+  },
+  {
+    id: "spatial",
+    label: "空間邏輯與建構型",
+    hint: "喜歡樂高、積木、拼圖，在意細節與對稱",
+    daily: "喜歡拼樂高、積木、拼圖，著迷於機械結構、軌道車，或是畫畫時很在意細節與對稱。",
+    fits: ["piano"],
+    analysis:
+      "鍵盤樂器在視覺上是線性且邏輯極為對稱的（白鍵與黑鍵的高低音排列清晰可見）。這類孩子善於理解空間分佈與規則，鋼琴的雙手配合、多聲部結構與樂理視覺化，會讓他們像在「組裝結構」一樣享受建構音樂的樂趣。",
+  },
+  {
+    id: "expressive",
+    label: "表達欲與情緒抒發型",
+    hint: "說話表情豐富、喜歡模仿台詞或角色扮演",
+    daily: "說話聲音表情豐富、喜歡模仿台詞、情感細膩或享受角色扮演。",
+    fits: ["vocal", "acoustic"],
+    analysis:
+      "這類孩子習慣把「自己」當作共鳴箱來傳遞感受。人聲是最直接的抒發，而弦樂彈唱（如好入門的烏克麗麗或木吉他）能提供自彈自唱的完整感，樂器直接抱在懷裡產生共鳴，容易讓他們把情緒直接轉化為音樂表達。",
+  },
+  {
+    id: "steady",
+    label: "團隊協作與沉穩觀察型",
+    hint: "善於傾聽、不搶風頭，做事專注沉穩",
+    daily: "善於傾聽、在團體中不搶風頭但不可或缺、做事專注沉穩",
+    fits: ["bass"],
+    analysis:
+      "貝斯與低音弦樂器是樂曲的骨幹，負責黏合鼓的節奏與旋律的和聲。心思細膩、懂得在背後支撐大局、享受「低調卻掌控全場氣氛」的孩子，往往能在低音樂器中找到極大的安全感與自我價值。",
+  },
+  {
+    id: "cool",
+    label: "帥氣個性與自我展現型",
+    hint: "喜歡動漫熱血歌，享受被注目和酷感",
+    daily: "喜歡動漫熱血主題曲、喜歡展現個人風格、享受被注目、對有「酷感」的事物特別著迷。",
+    fits: ["electric"],
+    analysis:
+      "電吉他音色變化極多（破音、效果器變化多元），視覺張力與 Solo 表現力極強。對自我風格鮮明、需要舞台感與酷炫氛圍的孩子來說，電吉他的帥氣度與即興空間能帶來無可取代的吸引力。",
+  },
 ];
 
 const WISHES: { id: WishId; label: string; hint: string }[] = [
@@ -178,6 +238,18 @@ export const QUESTIONS: Question[] = [
     options: PERSONALITIES.map((item) => ({ id: item.id, label: item.label })),
   },
   {
+    field: "style",
+    title: "孩子平常比較像哪一種？",
+    image: "/illustrations/q-personality.jpg",
+    alt: "孩子在跑跳、拼積木、唱歌，以及安靜看著大家",
+    columns: 1,
+    options: STYLES.map((item) => ({
+      id: item.id,
+      label: item.label,
+      hint: item.hint,
+    })),
+  },
+  {
     field: "play",
     title: "孩子平時比較喜歡？",
     image: "/illustrations/q-play.jpg",
@@ -254,19 +326,32 @@ export const INSTRUMENTS: Record<
     alt: "孩子坐在爵士鼓前面，高舉鼓棒笑著",
     courses: [{ form: COURSE_LABEL.drums, minYears: 3 }],
   },
-  guitar: {
-    id: "guitar",
-    name: "木吉他／電吉他／Bass（低音吉他）",
-    blurb: "一首歌可以在手裡慢慢長出來。木吉他溫柔，電吉他比較有勁，Bass 把低音補上。",
-    observation:
-      "建議二、三年級以上，最小大概一年級。孩子要很有想法、很有主見，是真的自己想彈。",
+  acoustic: {
+    id: "acoustic",
+    name: "木吉他",
+    blurb: "抱在懷裡就會響。一首歌可以邊唱邊彈，慢慢長出來。",
+    observation: STRING_OBSERVATION,
     image: "/illustrations/inst-guitar.jpg",
-    alt: "孩子抱著木吉他，旁邊靠著一把電吉他",
-    courses: [
-      { form: COURSE_LABEL.acoustic, minYears: 8 },
-      { form: COURSE_LABEL.electric, minYears: 6 },
-      { form: COURSE_LABEL.bass, minYears: 8 },
-    ],
+    alt: "孩子抱著木吉他",
+    courses: [{ form: COURSE_LABEL.acoustic, minYears: 8 }],
+  },
+  electric: {
+    id: "electric",
+    name: "電吉他",
+    blurb: "音色可以很溫柔，也可以很有勁。想展現自己的時候，它很有舞台感。",
+    observation: STRING_OBSERVATION,
+    image: "/illustrations/inst-guitar.jpg",
+    alt: "孩子站在電吉他旁邊",
+    courses: [{ form: COURSE_LABEL.electric, minYears: 6 }],
+  },
+  bass: {
+    id: "bass",
+    name: "電貝斯",
+    blurb: "聲音低調，卻把整首歌黏在一起。不搶旋律，卻讓大家站得住。",
+    observation: STRING_OBSERVATION,
+    image: "/illustrations/inst-bass.jpg",
+    alt: "孩子抱著電貝斯，安靜地笑",
+    courses: [{ form: COURSE_LABEL.bass, minYears: 8 }],
   },
   vocal: {
     id: "vocal",
@@ -300,15 +385,21 @@ export function ageProfile(id: AgeId) {
   return byId(AGES, id);
 }
 
+export function styleProfile(id: StyleId) {
+  return byId(STYLES, id);
+}
+
 /** 喜歡唱歌，或聽到音樂會跟著唱，都算對旋律敏感。 */
 export function likesMelody(answers: Answers): boolean {
   return answers.play === "sing" || answers.hear === "singalong";
 }
 
-/** 吉他和 Bass 只看年級與第 7 題，兩個條件都要符合。 */
+/** 木吉他、電吉他、電貝斯只看兩個條件：一年級以上，而且孩子自己想學。 */
 export function allowGuitar(answers: Answers): boolean {
   return ageProfile(answers.age).grade >= 1 && answers.wish === "self";
 }
+
+const STRING_IDS = new Set<InstrumentId>(["acoustic", "electric", "bass"]);
 
 /** 敲敲打打，或聽到音樂會跟著打拍子，爵士鼓排第一。 */
 export function prefersRhythm(answers: Answers): boolean {
@@ -317,30 +408,28 @@ export function prefersRhythm(answers: Answers): boolean {
 
 export function recommend(answers: Answers): InstrumentId[] {
   const guitarOk = allowGuitar(answers);
+  const style = styleProfile(answers.style);
   const others: InstrumentId[] = [];
 
   if (likesMelody(answers)) {
     others.push("vocal", "piano");
-  } else if (answers.play === "keys") {
-    others.push("piano");
-    if (!guitarOk) {
-      others.push("vocal");
-    }
-  } else if (
-    answers.personality === "shy" ||
-    answers.hear === "quiet" ||
-    answers.music === "classical"
-  ) {
-    others.push("piano");
-    if (!guitarOk) {
-      others.push("vocal");
-    }
-  } else {
-    others.push("vocal");
   }
 
-  if (guitarOk) {
-    others.push("guitar");
+  for (const id of style.fits) {
+    if (STRING_IDS.has(id) && !guitarOk) {
+      continue;
+    }
+    if (id !== "drums" && !others.includes(id)) {
+      others.push(id);
+    }
+  }
+
+  if (others.length === 0) {
+    others.push(
+      answers.play === "keys" || answers.hear === "quiet" || answers.music === "classical"
+        ? "piano"
+        : "vocal",
+    );
   }
 
   return prefersRhythm(answers) ? ["drums", ...others] : [...others, "drums"];
@@ -394,6 +483,7 @@ const QUERY_KEYS = {
   music: "m",
   reason: "r",
   wish: "w",
+  style: "s",
 } as const;
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -417,6 +507,7 @@ export function parseAnswers(
   const music = first(sp[QUERY_KEYS.music]);
   const reason = first(sp[QUERY_KEYS.reason]);
   const wish = first(sp[QUERY_KEYS.wish]);
+  const style = first(sp[QUERY_KEYS.style]);
   if (
     !isId(AGES, age) ||
     !isId(PERSONALITIES, personality) ||
@@ -424,11 +515,12 @@ export function parseAnswers(
     !isId(HEARS, hear) ||
     !isId(MUSICS, music) ||
     !isId(REASONS, reason) ||
-    !isId(WISHES, wish)
+    !isId(WISHES, wish) ||
+    !isId(STYLES, style)
   ) {
     return null;
   }
-  return { age, personality, play, hear, music, reason, wish };
+  return { age, personality, play, hear, music, reason, wish, style };
 }
 
 export function hasQuizParams(sp: Record<string, string | string[] | undefined>): boolean {
@@ -444,6 +536,7 @@ export function toQuery(answers: Answers): string {
   params.set(QUERY_KEYS.music, answers.music);
   params.set(QUERY_KEYS.reason, answers.reason);
   params.set(QUERY_KEYS.wish, answers.wish);
+  params.set(QUERY_KEYS.style, answers.style);
   return `?${params.toString()}`;
 }
 

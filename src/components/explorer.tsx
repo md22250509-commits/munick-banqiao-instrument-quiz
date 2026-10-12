@@ -23,6 +23,7 @@ import {
   needsAgeNote,
   parseAnswers,
   recommend,
+  styleProfile,
   toQuery,
   type Answers,
 } from "@/lib/quiz";
@@ -205,7 +206,7 @@ function Intro({
       </figure>
       <h1 className="mt-5 text-[2rem] leading-tight font-black">孩子適合什麼樂器？</h1>
       <p className="mt-3 text-lg leading-relaxed">
-        不是幫孩子下定論。七個小問題，大約一分鐘，先找找他可能玩得開心的方向。
+        不是幫孩子下定論。八個小問題，大約一分鐘，先找找他可能玩得開心的方向。
       </p>
       <Button
         type="button"
@@ -228,12 +229,33 @@ function Result({
   const picks = recommend(answers);
   const formUrl = buildPrefillUrl(answers, picks);
   const showAgeNote = needsAgeNote(picks, ageProfile(answers.age).years);
+  const style = styleProfile(answers.style);
+  const withheldStrings = style.fits.some(
+    (id) => (id === "acoustic" || id === "electric" || id === "bass") && !picks.includes(id),
+  );
 
   return (
     <Shell>
       <div className="mt-5">
         <p className="text-base font-bold text-[#E15B48]">探索結果</p>
         <h1 className="mt-1 text-[2rem] leading-tight font-black">你家孩子可能會喜歡</h1>
+        <section className="mt-5 rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-[#F0D9C8]">
+          <p className="text-sm font-black tracking-wide text-[#E15B48]">比較接近</p>
+          <h2 className="mt-1 text-2xl leading-snug font-black">{style.label}</h2>
+          <p className="mt-3 text-lg leading-relaxed">
+            <span className="font-black">日常表現：</span>
+            {style.daily}
+          </p>
+          <p className="mt-3 text-lg leading-relaxed">
+            <span className="font-black">關聯性分析：</span>
+            {style.analysis}
+          </p>
+          {withheldStrings ? (
+            <p className="mt-3 text-base leading-relaxed text-[#7A645B]">
+              木吉他、電吉他和電貝斯要一年級以上，而且是孩子自己想學，才會放進這次的推薦。
+            </p>
+          ) : null}
+        </section>
         <ul className="mt-5 flex flex-col gap-5">
           {picks.map((id) => {
             const instrument = INSTRUMENTS[id];
@@ -248,7 +270,7 @@ function Result({
                     className="object-cover"
                   />
                 </figure>
-                <h2 className="mt-4 text-2xl leading-snug font-black">{instrument.name}</h2>
+                <h3 className="mt-4 text-2xl leading-snug font-black">{instrument.name}</h3>
                 <p className="mt-2 text-lg leading-relaxed">{instrument.blurb}</p>
                 <div className="mt-4 rounded-2xl bg-[#FFF6EC] px-4 py-3">
                   <p className="text-sm font-black tracking-wide text-[#E15B48]">老師觀察</p>
