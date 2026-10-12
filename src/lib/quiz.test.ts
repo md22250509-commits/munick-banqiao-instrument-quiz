@@ -4,6 +4,7 @@ import {
   COURSE_LABEL,
   DRUMS_NOTE,
   INSTRUMENTS,
+  QUESTIONS,
   STYLES,
   buildPrefillUrl,
   coursesFor,
@@ -15,7 +16,6 @@ import type { Answers } from "./quiz.ts";
 
 const ALL_AGES = ["pre", "g1", "g23", "g46", "junior"] as const;
 const ALL_PERSONALITIES = ["lively", "shy", "mature", "childlike", "sincere", "clever"] as const;
-const ALL_PLAYS = ["hit", "sing", "keys"] as const;
 const ALL_HEARS = ["beat", "singalong", "dance", "quiet"] as const;
 const ALL_MUSICS = ["classical", "mandopop", "anime", "kpop", "rock"] as const;
 const ALL_REASONS = ["explore", "relax"] as const;
@@ -26,41 +26,52 @@ function answers(partial: Answers): Answers {
   return partial;
 }
 
+describe("questions", () => {
+  it("no longer asks what the child usually likes to do", () => {
+    assert.equal(QUESTIONS.length, 7);
+    assert.equal(
+      QUESTIONS.some((question) => question.title.includes("平時比較喜歡")),
+      false,
+    );
+    assert.deepEqual(
+      QUESTIONS.map((question) => question.field),
+      ["age", "personality", "style", "hear", "music", "reason", "wish"],
+    );
+  });
+});
+
 describe("recommend", () => {
   it("keeps drums, rhythm order, melody, and the string-instrument gate", () => {
     for (const age of ALL_AGES) {
       for (const personality of ALL_PERSONALITIES) {
-        for (const play of ALL_PLAYS) {
-          for (const hear of ALL_HEARS) {
-            for (const music of ALL_MUSICS) {
-              for (const reason of ALL_REASONS) {
-                for (const wish of ALL_WISHES) {
-                  for (const style of ALL_STYLES) {
-                    const picks = recommend(
-                      answers({ age, personality, play, hear, music, reason, wish, style }),
-                    );
-                    assert.ok(picks.length >= 2 && picks.length <= 4);
-                    assert.equal(new Set(picks).size, picks.length);
-                    assert.ok(picks.includes("drums"));
-                    const stringsOk = age !== "pre" && wish === "self";
-                    for (const id of ["acoustic", "electric", "bass"] as const) {
-                      if (!stringsOk) assert.equal(picks.includes(id), false);
-                    }
-                    if (style === "expressive" && stringsOk) assert.ok(picks.includes("acoustic"));
-                    if (style === "steady" && stringsOk) assert.ok(picks.includes("bass"));
-                    if (style === "cool" && stringsOk) assert.ok(picks.includes("electric"));
-                    if (style === "energy" || style === "spatial") {
-                      assert.equal(picks.includes("acoustic"), false);
-                      assert.equal(picks.includes("electric"), false);
-                      assert.equal(picks.includes("bass"), false);
-                    }
-                    const rhythm = play === "hit" || hear === "beat";
-                    if (rhythm) assert.equal(picks[0], "drums");
-                    else assert.equal(picks.at(-1), "drums");
-                    if (play === "sing" || hear === "singalong") {
-                      assert.ok(picks.indexOf("vocal") >= 0);
-                      assert.ok(picks.indexOf("vocal") < picks.indexOf("piano"));
-                    }
+        for (const hear of ALL_HEARS) {
+          for (const music of ALL_MUSICS) {
+            for (const reason of ALL_REASONS) {
+              for (const wish of ALL_WISHES) {
+                for (const style of ALL_STYLES) {
+                  const picks = recommend(
+                    answers({ age, personality, hear, music, reason, wish, style }),
+                  );
+                  assert.ok(picks.length >= 2 && picks.length <= 4);
+                  assert.equal(new Set(picks).size, picks.length);
+                  assert.ok(picks.includes("drums"));
+                  const stringsOk = age !== "pre" && wish === "self";
+                  for (const id of ["acoustic", "electric", "bass"] as const) {
+                    if (!stringsOk) assert.equal(picks.includes(id), false);
+                  }
+                  if (style === "expressive" && stringsOk) assert.ok(picks.includes("acoustic"));
+                  if (style === "steady" && stringsOk) assert.ok(picks.includes("bass"));
+                  if (style === "cool" && stringsOk) assert.ok(picks.includes("electric"));
+                  if (style === "energy" || style === "spatial") {
+                    assert.equal(picks.includes("acoustic"), false);
+                    assert.equal(picks.includes("electric"), false);
+                    assert.equal(picks.includes("bass"), false);
+                  }
+                  if (hear === "beat") assert.equal(picks[0], "drums");
+                  else assert.equal(picks.at(-1), "drums");
+                  if (hear === "singalong") {
+                    assert.ok(picks.indexOf("vocal") >= 0);
+                    assert.ok(picks.indexOf("vocal") < picks.indexOf("piano"));
                   }
                 }
               }
@@ -71,13 +82,12 @@ describe("recommend", () => {
     }
   });
 
-  it("matches an energetic child with drums first", () => {
+  it("puts drums first for an energetic child who keeps the beat", () => {
     const picks = recommend(
       answers({
         age: "g23",
         personality: "lively",
-        play: "hit",
-        hear: "dance",
+        hear: "beat",
         music: "rock",
         reason: "explore",
         wish: "self",
@@ -90,12 +100,27 @@ describe("recommend", () => {
     assert.equal(picks.includes("bass"), false);
   });
 
+  it("puts drums last when an energetic child does not keep the beat", () => {
+    const picks = recommend(
+      answers({
+        age: "g23",
+        personality: "lively",
+        hear: "dance",
+        music: "rock",
+        reason: "explore",
+        wish: "self",
+        style: "energy",
+      }),
+    );
+    assert.equal(picks.at(-1), "drums");
+    assert.notEqual(picks[0], "drums");
+  });
+
   it("matches a spatial child with piano", () => {
     const picks = recommend(
       answers({
         age: "g1",
         personality: "clever",
-        play: "keys",
         hear: "quiet",
         music: "classical",
         reason: "relax",
@@ -111,7 +136,6 @@ describe("recommend", () => {
       answers({
         age: "g23",
         personality: "lively",
-        play: "keys",
         hear: "quiet",
         music: "mandopop",
         reason: "explore",
@@ -132,7 +156,6 @@ describe("recommend", () => {
       answers({
         age: "pre",
         personality: "lively",
-        play: "sing",
         hear: "dance",
         music: "kpop",
         reason: "explore",
@@ -140,7 +163,8 @@ describe("recommend", () => {
         style: "expressive",
       }),
     );
-    assert.deepEqual(picks, ["vocal", "piano", "drums"]);
+    assert.deepEqual(picks, ["vocal", "drums"]);
+    assert.equal(picks.includes("acoustic"), false);
   });
 
   it("matches a steady child with electric bass only when both gates pass", () => {
@@ -148,7 +172,6 @@ describe("recommend", () => {
       answers({
         age: "g46",
         personality: "sincere",
-        play: "keys",
         hear: "quiet",
         music: "classical",
         reason: "relax",
@@ -161,7 +184,6 @@ describe("recommend", () => {
       answers({
         age: "junior",
         personality: "mature",
-        play: "keys",
         hear: "quiet",
         music: "classical",
         reason: "relax",
@@ -178,7 +200,6 @@ describe("recommend", () => {
       answers({
         age: "junior",
         personality: "lively",
-        play: "hit",
         hear: "beat",
         music: "rock",
         reason: "explore",
@@ -195,15 +216,14 @@ describe("recommend", () => {
       answers({
         age: "g1",
         personality: "lively",
-        play: "sing",
-        hear: "beat",
+        hear: "singalong",
         music: "kpop",
         reason: "explore",
         wish: "self",
         style: "cool",
       }),
     );
-    assert.deepEqual(picks, ["drums", "vocal", "piano", "electric"]);
+    assert.deepEqual(picks, ["vocal", "piano", "electric", "drums"]);
   });
 });
 
@@ -261,7 +281,6 @@ describe("form prefill", () => {
     const sample = answers({
       age: "g23",
       personality: "lively",
-      play: "keys",
       hear: "quiet",
       music: "mandopop",
       reason: "relax",
@@ -294,7 +313,6 @@ describe("shareable result url", () => {
     const sample = answers({
       age: "g1",
       personality: "clever",
-      play: "sing",
       hear: "dance",
       music: "kpop",
       reason: "explore",

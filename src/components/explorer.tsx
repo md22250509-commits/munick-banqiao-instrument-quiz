@@ -206,7 +206,7 @@ function Intro({
       </figure>
       <h1 className="mt-5 text-[2rem] leading-tight font-black">孩子適合什麼樂器？</h1>
       <p className="mt-3 text-lg leading-relaxed">
-        不是幫孩子下定論。八個小問題，大約一分鐘，先找找他可能玩得開心的方向。
+        不是幫孩子下定論。七個小問題，大約一分鐘，先找找他可能玩得開心的方向。
       </p>
       <Button
         type="button"

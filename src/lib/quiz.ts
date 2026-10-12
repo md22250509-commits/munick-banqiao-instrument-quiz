@@ -50,7 +50,6 @@ export type PersonalityId =
   | "childlike"
   | "sincere"
   | "clever";
-export type PlayId = "hit" | "sing" | "keys";
 export type HearId = "beat" | "singalong" | "dance" | "quiet";
 export type MusicId = "classical" | "mandopop" | "anime" | "kpop" | "rock";
 export type ReasonId = "explore" | "relax";
@@ -60,7 +59,6 @@ export type StyleId = "energy" | "spatial" | "expressive" | "steady" | "cool";
 export type Answers = {
   age: AgeId;
   personality: PersonalityId;
-  play: PlayId;
   hear: HearId;
   music: MusicId;
   reason: ReasonId;
@@ -180,12 +178,6 @@ const PERSONALITIES: { id: PersonalityId; label: string; form: string }[] = [
   { id: "clever", label: "聰明機智", form: "聰明機智" },
 ];
 
-const PLAYS: { id: PlayId; label: string; hint: string }[] = [
-  { id: "hit", label: "敲敲打打", hint: "鼓、節奏、敲東西" },
-  { id: "sing", label: "唱歌", hint: "哼歌、跟著旋律" },
-  { id: "keys", label: "按按鍵", hint: "鍵盤、按鈕、一格一格" },
-];
-
 const HEARS: { id: HearId; label: string }[] = [
   { id: "beat", label: "跟著打拍子" },
   { id: "singalong", label: "跟著唱" },
@@ -244,18 +236,6 @@ export const QUESTIONS: Question[] = [
     alt: "孩子在跑跳、拼積木、唱歌，以及安靜看著大家",
     columns: 1,
     options: STYLES.map((item) => ({
-      id: item.id,
-      label: item.label,
-      hint: item.hint,
-    })),
-  },
-  {
-    field: "play",
-    title: "孩子平時比較喜歡？",
-    image: "/illustrations/q-play.jpg",
-    alt: "孩子在桌上玩小鼓、麥克風、鍵盤和吉他",
-    columns: 1,
-    options: PLAYS.map((item) => ({
       id: item.id,
       label: item.label,
       hint: item.hint,
@@ -389,9 +369,9 @@ export function styleProfile(id: StyleId) {
   return byId(STYLES, id);
 }
 
-/** 喜歡唱歌，或聽到音樂會跟著唱，都算對旋律敏感。 */
+/** 聽到音樂會跟著唱，算對旋律敏感。 */
 export function likesMelody(answers: Answers): boolean {
-  return answers.play === "sing" || answers.hear === "singalong";
+  return answers.hear === "singalong";
 }
 
 /** 木吉他、電吉他、電貝斯只看兩個條件：一年級以上，而且孩子自己想學。 */
@@ -401,9 +381,9 @@ export function allowGuitar(answers: Answers): boolean {
 
 const STRING_IDS = new Set<InstrumentId>(["acoustic", "electric", "bass"]);
 
-/** 敲敲打打，或聽到音樂會跟著打拍子，爵士鼓排第一。 */
+/** 聽到音樂會跟著打拍子，爵士鼓排第一。 */
 export function prefersRhythm(answers: Answers): boolean {
-  return answers.play === "hit" || answers.hear === "beat";
+  return answers.hear === "beat";
 }
 
 export function recommend(answers: Answers): InstrumentId[] {
@@ -425,11 +405,7 @@ export function recommend(answers: Answers): InstrumentId[] {
   }
 
   if (others.length === 0) {
-    others.push(
-      answers.play === "keys" || answers.hear === "quiet" || answers.music === "classical"
-        ? "piano"
-        : "vocal",
-    );
+    others.push(answers.hear === "quiet" || answers.music === "classical" ? "piano" : "vocal");
   }
 
   return prefersRhythm(answers) ? ["drums", ...others] : [...others, "drums"];
@@ -478,7 +454,6 @@ export function buildPrefillUrl(answers: Answers, picks: InstrumentId[]): string
 const QUERY_KEYS = {
   age: "a",
   personality: "p",
-  play: "t",
   hear: "h",
   music: "m",
   reason: "r",
@@ -502,7 +477,6 @@ export function parseAnswers(
 ): Answers | null {
   const age = first(sp[QUERY_KEYS.age]);
   const personality = first(sp[QUERY_KEYS.personality]);
-  const play = first(sp[QUERY_KEYS.play]);
   const hear = first(sp[QUERY_KEYS.hear]);
   const music = first(sp[QUERY_KEYS.music]);
   const reason = first(sp[QUERY_KEYS.reason]);
@@ -511,7 +485,6 @@ export function parseAnswers(
   if (
     !isId(AGES, age) ||
     !isId(PERSONALITIES, personality) ||
-    !isId(PLAYS, play) ||
     !isId(HEARS, hear) ||
     !isId(MUSICS, music) ||
     !isId(REASONS, reason) ||
@@ -520,7 +493,7 @@ export function parseAnswers(
   ) {
     return null;
   }
-  return { age, personality, play, hear, music, reason, wish, style };
+  return { age, personality, hear, music, reason, wish, style };
 }
 
 export function hasQuizParams(sp: Record<string, string | string[] | undefined>): boolean {
@@ -531,7 +504,6 @@ export function toQuery(answers: Answers): string {
   const params = new URLSearchParams();
   params.set(QUERY_KEYS.age, answers.age);
   params.set(QUERY_KEYS.personality, answers.personality);
-  params.set(QUERY_KEYS.play, answers.play);
   params.set(QUERY_KEYS.hear, answers.hear);
   params.set(QUERY_KEYS.music, answers.music);
   params.set(QUERY_KEYS.reason, answers.reason);
