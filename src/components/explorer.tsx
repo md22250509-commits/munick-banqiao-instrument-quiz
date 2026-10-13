@@ -31,7 +31,7 @@ import {
 export function Explorer() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const params = Object.fromEntries(searchParams.entries());
+  const params = readSearch(searchParams);
   const query = searchParams.toString();
   const fromUrl = parseAnswers(params);
   const brokenLink = !fromUrl && hasQuizParams(params);
@@ -70,13 +70,27 @@ export function Explorer() {
   }
 
   const question = QUESTIONS[stepIndex];
-  const selected = pending ?? draft[question.field];
+  const stored = draft[question.field];
+  const selectedIds = question.multiple
+    ? Array.isArray(stored)
+      ? stored
+      : []
+    : [pending ?? (typeof stored === "string" ? stored : "")].filter(Boolean);
 
   function choose(id: string) {
+    if (question.multiple) {
+      setDraft((prev) => {
+        const current = prev[question.field];
+        const list = Array.isArray(current) ? current.map(String) : [];
+        const nextList = list.includes(id) ? list.filter((item) => item !== id) : [...list, id];
+        return { ...prev, [question.field]: nextList } as Partial<Answers>;
+      });
+      return;
+    }
     if (lock.current) {
       return;
     }
-    const next = { ...draft, [question.field]: id };
+    const next = { ...draft, [question.field]: id } as Partial<Answers>;
     setDraft(next);
     setPending(id);
     const isLast = stepIndex === QUESTIONS.length - 1;
@@ -91,6 +105,17 @@ export function Explorer() {
       setPending(null);
       lock.current = false;
     }, delay);
+  }
+
+  function goNext() {
+    if (!question.multiple || selectedIds.length === 0 || !isCompleteEnough(draft, stepIndex)) {
+      return;
+    }
+    if (stepIndex === QUESTIONS.length - 1 && isComplete(draft)) {
+      router.push(toQuery(draft));
+      return;
+    }
+    setStepIndex((index) => index + 1);
   }
 
   return (
@@ -144,7 +169,9 @@ export function Explorer() {
           />
         </figure>
         <h1 className="mt-4 text-[1.75rem] leading-snug font-black">{question.title}</h1>
-        <p className="mt-1 text-lg text-[#7A645B]">選最接近的就好。</p>
+        <p className="mt-1 text-lg text-[#7A645B]">
+          {question.multiple ? "可以選多個。" : "選最接近的就好。"}
+        </p>
         <div
           className={cn(
             "mt-4 grid gap-3",
@@ -152,7 +179,7 @@ export function Explorer() {
           )}
         >
           {question.options.map((option) => {
-            const active = selected === option.id;
+            const active = selectedIds.includes(option.id);
             return (
               <Button
                 key={option.id}
@@ -175,6 +202,18 @@ export function Explorer() {
             );
           })}
         </div>
+        {question.multiple ? (
+          <div className="sticky bottom-0 z-10 -mx-5 mt-4 bg-[#fff8f3]/95 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
+            <Button
+              type="button"
+              disabled={selectedIds.length === 0}
+              className="h-16 w-full rounded-full text-xl font-black"
+              onClick={goNext}
+            >
+              {stepIndex === QUESTIONS.length - 1 ? "看結果" : "下一題"}
+            </Button>
+          </div>
+        ) : null}
       </div>
     </Shell>
   );
@@ -206,7 +245,7 @@ function Intro({
       </figure>
       <h1 className="mt-5 text-[2rem] leading-tight font-black">孩子適合什麼樂器？</h1>
       <p className="mt-3 text-lg leading-relaxed">
-        不是幫孩子下定論。七個小問題，大約一分鐘，先找找他可能玩得開心的方向。
+        不是幫孩子下定論。七個小問題，大約一分鐘。除了年級，其他題可以選多個。
       </p>
       <Button
         type="button"
@@ -229,9 +268,11 @@ function Result({
   const picks = recommend(answers);
   const formUrl = buildPrefillUrl(answers, picks);
   const showAgeNote = needsAgeNote(picks, ageProfile(answers.age).years);
-  const style = styleProfile(answers.style);
-  const withheldStrings = style.fits.some(
-    (id) => (id === "acoustic" || id === "electric" || id === "bass") && !picks.includes(id),
+  const styles = answers.style.map((id) => styleProfile(id));
+  const withheldStrings = styles.some((style) =>
+    style.fits.some(
+      (id) => (id === "acoustic" || id === "electric" || id === "bass") && !picks.includes(id),
+    ),
   );
 
   return (
@@ -239,23 +280,30 @@ function Result({
       <div className="mt-5">
         <p className="text-base font-bold text-[#E15B48]">探索結果</p>
         <h1 className="mt-1 text-[2rem] leading-tight font-black">你家孩子可能會喜歡</h1>
-        <section className="mt-5 rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-[#F0D9C8]">
-          <p className="text-sm font-black tracking-wide text-[#E15B48]">比較接近</p>
-          <h2 className="mt-1 text-2xl leading-snug font-black">{style.label}</h2>
-          <p className="mt-3 text-lg leading-relaxed">
-            <span className="font-black">日常表現：</span>
-            {style.daily}
+        <div className="mt-5 flex flex-col gap-4">
+          {styles.map((style) => (
+            <section
+              key={style.id}
+              className="rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-[#F0D9C8]"
+            >
+              <p className="text-sm font-black tracking-wide text-[#E15B48]">比較接近</p>
+              <h2 className="mt-1 text-2xl leading-snug font-black">{style.label}</h2>
+              <p className="mt-3 text-lg leading-relaxed">
+                <span className="font-black">日常表現：</span>
+                {style.daily}
+              </p>
+              <p className="mt-3 text-lg leading-relaxed">
+                <span className="font-black">關聯性分析：</span>
+                {style.analysis}
+              </p>
+            </section>
+          ))}
+        </div>
+        {withheldStrings ? (
+          <p className="mt-3 text-base leading-relaxed text-[#7A645B]">
+            木吉他、電吉他和電貝斯要一年級以上，而且是孩子自己想學，才會放進這次的推薦。
           </p>
-          <p className="mt-3 text-lg leading-relaxed">
-            <span className="font-black">關聯性分析：</span>
-            {style.analysis}
-          </p>
-          {withheldStrings ? (
-            <p className="mt-3 text-base leading-relaxed text-[#7A645B]">
-              木吉他、電吉他和電貝斯要一年級以上，而且是孩子自己想學，才會放進這次的推薦。
-            </p>
-          ) : null}
-        </section>
+        ) : null}
         <ul className="mt-5 flex flex-col gap-5">
           {picks.map((id) => {
             const instrument = INSTRUMENTS[id];
@@ -378,5 +426,29 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function isComplete(draft: Partial<Answers>): draft is Answers {
-  return QUESTIONS.every((question) => Boolean(draft[question.field]));
+  return isCompleteEnough(draft, QUESTIONS.length - 1);
+}
+
+function isCompleteEnough(draft: Partial<Answers>, throughIndex: number): boolean {
+  return QUESTIONS.slice(0, throughIndex + 1).every((question) => hasAnswer(draft, question));
+}
+
+function hasAnswer(draft: Partial<Answers>, question: (typeof QUESTIONS)[number]): boolean {
+  const value = draft[question.field];
+  if (question.multiple) {
+    return Array.isArray(value) && value.length > 0;
+  }
+  return typeof value === "string" && value.length > 0;
+}
+
+function readSearch(searchParams: { keys(): Iterable<string>; getAll(key: string): string[] }) {
+  const record: Record<string, string | string[]> = {};
+  for (const key of searchParams.keys()) {
+    if (key in record) {
+      continue;
+    }
+    const values = searchParams.getAll(key);
+    record[key] = values.length > 1 ? values : values[0];
+  }
+  return record;
 }

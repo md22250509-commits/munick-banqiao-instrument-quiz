@@ -58,12 +58,12 @@ export type StyleId = "energy" | "spatial" | "expressive" | "steady" | "cool";
 
 export type Answers = {
   age: AgeId;
-  personality: PersonalityId;
-  hear: HearId;
-  music: MusicId;
-  reason: ReasonId;
-  wish: WishId;
-  style: StyleId;
+  personality: PersonalityId[];
+  hear: HearId[];
+  music: MusicId[];
+  reason: ReasonId[];
+  wish: WishId[];
+  style: StyleId[];
 };
 
 export const DRUMS_NOTE =
@@ -81,6 +81,7 @@ export type Question = {
   image: string;
   alt: string;
   columns: 1 | 2;
+  multiple: boolean;
   options: Option[];
 };
 
@@ -219,6 +220,7 @@ export const QUESTIONS: Question[] = [
     image: "/illustrations/q-age.jpg",
     alt: "三個不同身高的孩子，有人拿小鼓、有人拿音符、有人抱著吉他",
     columns: 1,
+    multiple: false,
     options: AGES.map((item) => ({ id: item.id, label: item.label })),
   },
   {
@@ -227,6 +229,7 @@ export const QUESTIONS: Question[] = [
     image: "/illustrations/q-personality.jpg",
     alt: "同一個孩子揮手打招呼、躲在鼓後面，以及坐著想事情",
     columns: 2,
+    multiple: true,
     options: PERSONALITIES.map((item) => ({ id: item.id, label: item.label })),
   },
   {
@@ -235,6 +238,7 @@ export const QUESTIONS: Question[] = [
     image: "/illustrations/q-personality.jpg",
     alt: "孩子在跑跳、拼積木、唱歌，以及安靜看著大家",
     columns: 1,
+    multiple: true,
     options: STYLES.map((item) => ({
       id: item.id,
       label: item.label,
@@ -247,6 +251,7 @@ export const QUESTIONS: Question[] = [
     image: "/illustrations/q-listen.jpg",
     alt: "孩子把耳機掛在脖子上，踏著步子聽歌",
     columns: 2,
+    multiple: true,
     options: HEARS.map((item) => ({ id: item.id, label: item.label })),
   },
   {
@@ -255,6 +260,7 @@ export const QUESTIONS: Question[] = [
     image: "/illustrations/q-music.jpg",
     alt: "小提琴、鋼琴鍵、吉他、小鼓，和窗外的星空",
     columns: 1,
+    multiple: true,
     options: MUSICS.map((item) => ({ id: item.id, label: item.label })),
   },
   {
@@ -263,6 +269,7 @@ export const QUESTIONS: Question[] = [
     image: "/illustrations/q-reason.jpg",
     alt: "孩子坐在有植物的房間裡，輕輕摸著鼓，旁邊有吉他和鍵盤",
     columns: 1,
+    multiple: true,
     options: REASONS.map((item) => ({
       id: item.id,
       label: item.label,
@@ -275,6 +282,7 @@ export const QUESTIONS: Question[] = [
     image: "/illustrations/q-reason.jpg",
     alt: "孩子坐在有植物的房間裡，自己伸手去摸樂器",
     columns: 1,
+    multiple: true,
     options: WISHES.map((item) => ({
       id: item.id,
       label: item.label,
@@ -369,43 +377,45 @@ export function styleProfile(id: StyleId) {
   return byId(STYLES, id);
 }
 
-/** 聽到音樂會跟著唱，算對旋律敏感。 */
+/** 聽到音樂會跟著唱，算對旋律敏感。複選裡有這項就算。 */
 export function likesMelody(answers: Answers): boolean {
-  return answers.hear === "singalong";
+  return answers.hear.includes("singalong");
 }
 
 /** 木吉他、電吉他、電貝斯只看兩個條件：一年級以上，而且孩子自己想學。 */
 export function allowGuitar(answers: Answers): boolean {
-  return ageProfile(answers.age).grade >= 1 && answers.wish === "self";
+  return ageProfile(answers.age).grade >= 1 && answers.wish.includes("self");
 }
 
 const STRING_IDS = new Set<InstrumentId>(["acoustic", "electric", "bass"]);
 
-/** 聽到音樂會跟著打拍子，爵士鼓排第一。 */
+/** 聽到音樂會跟著打拍子，爵士鼓排第一。複選裡有這項就算。 */
 export function prefersRhythm(answers: Answers): boolean {
-  return answers.hear === "beat";
+  return answers.hear.includes("beat");
 }
 
 export function recommend(answers: Answers): InstrumentId[] {
   const guitarOk = allowGuitar(answers);
-  const style = styleProfile(answers.style);
   const others: InstrumentId[] = [];
 
   if (likesMelody(answers)) {
     others.push("vocal", "piano");
   }
 
-  for (const id of style.fits) {
-    if (STRING_IDS.has(id) && !guitarOk) {
-      continue;
-    }
-    if (id !== "drums" && !others.includes(id)) {
-      others.push(id);
+  for (const styleId of answers.style) {
+    for (const id of styleProfile(styleId).fits) {
+      if (STRING_IDS.has(id) && !guitarOk) {
+        continue;
+      }
+      if (id !== "drums" && !others.includes(id)) {
+        others.push(id);
+      }
     }
   }
 
   if (others.length === 0) {
-    others.push(answers.hear === "quiet" || answers.music === "classical" ? "piano" : "vocal");
+    const calm = answers.hear.includes("quiet") || answers.music.includes("classical");
+    others.push(calm ? "piano" : "vocal");
   }
 
   return prefersRhythm(answers) ? ["drums", ...others] : [...others, "drums"];
@@ -439,12 +449,15 @@ export function buildPrefillUrl(answers: Answers, picks: InstrumentId[]): string
   const params = new URLSearchParams();
   params.set("usp", "pp_url");
   params.append(`entry.${FORM_ENTRY.age}`, ageProfile(answers.age).formAge);
-  params.append(
-    `entry.${FORM_ENTRY.personality}`,
-    byId(PERSONALITIES, answers.personality).form,
-  );
-  params.append(`entry.${FORM_ENTRY.reason}`, byId(REASONS, answers.reason).form);
-  params.append(`entry.${FORM_ENTRY.music}`, byId(MUSICS, answers.music).form);
+  for (const id of answers.personality) {
+    params.append(`entry.${FORM_ENTRY.personality}`, byId(PERSONALITIES, id).form);
+  }
+  for (const id of answers.reason) {
+    params.append(`entry.${FORM_ENTRY.reason}`, byId(REASONS, id).form);
+  }
+  for (const id of answers.music) {
+    params.append(`entry.${FORM_ENTRY.music}`, byId(MUSICS, id).form);
+  }
   for (const course of coursesFor(picks, ageProfile(answers.age).years)) {
     params.append(`entry.${FORM_ENTRY.course}`, course);
   }
@@ -472,24 +485,44 @@ function isId<T extends { id: string }>(list: T[], value: string | undefined): v
   return Boolean(value && list.some((item) => item.id === value));
 }
 
+function manyIds<T extends { id: string }>(
+  list: T[],
+  value: string | string[] | undefined,
+): T["id"][] | null {
+  const raw = value === undefined ? [] : Array.isArray(value) ? value : [value];
+  if (raw.length === 0) {
+    return null;
+  }
+  const ids: T["id"][] = [];
+  for (const item of raw) {
+    if (!isId(list, item)) {
+      return null;
+    }
+    if (!ids.includes(item)) {
+      ids.push(item);
+    }
+  }
+  return ids;
+}
+
 export function parseAnswers(
   sp: Record<string, string | string[] | undefined>,
 ): Answers | null {
   const age = first(sp[QUERY_KEYS.age]);
-  const personality = first(sp[QUERY_KEYS.personality]);
-  const hear = first(sp[QUERY_KEYS.hear]);
-  const music = first(sp[QUERY_KEYS.music]);
-  const reason = first(sp[QUERY_KEYS.reason]);
-  const wish = first(sp[QUERY_KEYS.wish]);
-  const style = first(sp[QUERY_KEYS.style]);
+  const personality = manyIds(PERSONALITIES, sp[QUERY_KEYS.personality]);
+  const hear = manyIds(HEARS, sp[QUERY_KEYS.hear]);
+  const music = manyIds(MUSICS, sp[QUERY_KEYS.music]);
+  const reason = manyIds(REASONS, sp[QUERY_KEYS.reason]);
+  const wish = manyIds(WISHES, sp[QUERY_KEYS.wish]);
+  const style = manyIds(STYLES, sp[QUERY_KEYS.style]);
   if (
     !isId(AGES, age) ||
-    !isId(PERSONALITIES, personality) ||
-    !isId(HEARS, hear) ||
-    !isId(MUSICS, music) ||
-    !isId(REASONS, reason) ||
-    !isId(WISHES, wish) ||
-    !isId(STYLES, style)
+    !personality ||
+    !hear ||
+    !music ||
+    !reason ||
+    !wish ||
+    !style
   ) {
     return null;
   }
@@ -503,12 +536,12 @@ export function hasQuizParams(sp: Record<string, string | string[] | undefined>)
 export function toQuery(answers: Answers): string {
   const params = new URLSearchParams();
   params.set(QUERY_KEYS.age, answers.age);
-  params.set(QUERY_KEYS.personality, answers.personality);
-  params.set(QUERY_KEYS.hear, answers.hear);
-  params.set(QUERY_KEYS.music, answers.music);
-  params.set(QUERY_KEYS.reason, answers.reason);
-  params.set(QUERY_KEYS.wish, answers.wish);
-  params.set(QUERY_KEYS.style, answers.style);
+  for (const id of answers.personality) params.append(QUERY_KEYS.personality, id);
+  for (const id of answers.hear) params.append(QUERY_KEYS.hear, id);
+  for (const id of answers.music) params.append(QUERY_KEYS.music, id);
+  for (const id of answers.reason) params.append(QUERY_KEYS.reason, id);
+  for (const id of answers.wish) params.append(QUERY_KEYS.wish, id);
+  for (const id of answers.style) params.append(QUERY_KEYS.style, id);
   return `?${params.toString()}`;
 }
 

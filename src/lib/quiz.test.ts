@@ -22,8 +22,39 @@ const ALL_REASONS = ["explore", "relax"] as const;
 const ALL_WISHES = ["self", "family"] as const;
 const ALL_STYLES = ["energy", "spatial", "expressive", "steady", "cool"] as const;
 
-function answers(partial: Answers): Answers {
-  return partial;
+function asList<T extends string>(value: T | readonly T[]): T[] {
+  return Array.isArray(value) ? [...value] : [value];
+}
+
+function answers(partial: {
+  age: Answers["age"];
+  personality: Answers["personality"][number] | Answers["personality"];
+  hear: Answers["hear"][number] | Answers["hear"];
+  music: Answers["music"][number] | Answers["music"];
+  reason: Answers["reason"][number] | Answers["reason"];
+  wish: Answers["wish"][number] | Answers["wish"];
+  style: Answers["style"][number] | Answers["style"];
+}): Answers {
+  return {
+    age: partial.age,
+    personality: asList(partial.personality),
+    hear: asList(partial.hear),
+    music: asList(partial.music),
+    reason: asList(partial.reason),
+    wish: asList(partial.wish),
+    style: asList(partial.style),
+  };
+}
+
+function paramsFrom(query: string): Record<string, string | string[]> {
+  const search = new URLSearchParams(query.startsWith("?") ? query.slice(1) : query);
+  const params: Record<string, string | string[]> = {};
+  for (const key of search.keys()) {
+    if (key in params) continue;
+    const values = search.getAll(key);
+    params[key] = values.length > 1 ? values : values[0];
+  }
+  return params;
 }
 
 describe("questions", () => {
@@ -36,6 +67,10 @@ describe("questions", () => {
     assert.deepEqual(
       QUESTIONS.map((question) => question.field),
       ["age", "personality", "style", "hear", "music", "reason", "wish"],
+    );
+    assert.deepEqual(
+      QUESTIONS.map((question) => question.multiple),
+      [false, true, true, true, true, true, true],
     );
   });
 });
@@ -225,6 +260,36 @@ describe("recommend", () => {
     );
     assert.deepEqual(picks, ["vocal", "piano", "electric", "drums"]);
   });
+
+  it("keeps an instrument for every selected style, and leads with drums when they also keep the beat", () => {
+    const picks = recommend(
+      answers({
+        age: "g23",
+        personality: ["lively", "clever"],
+        hear: ["beat", "singalong"],
+        music: ["kpop", "rock"],
+        reason: ["explore", "relax"],
+        wish: ["self", "family"],
+        style: ["cool", "steady", "expressive"],
+      }),
+    );
+    assert.deepEqual(picks, ["drums", "vocal", "piano", "electric", "bass", "acoustic"]);
+  });
+
+  it("still allows strings when the child wants to learn, even if the family also chose it", () => {
+    const picks = recommend(
+      answers({
+        age: "g1",
+        personality: "sincere",
+        hear: "quiet",
+        music: "classical",
+        reason: "relax",
+        wish: ["family", "self"],
+        style: "steady",
+      }),
+    );
+    assert.deepEqual(picks, ["bass", "drums"]);
+  });
 });
 
 describe("teacher notes", () => {
@@ -290,7 +355,7 @@ describe("form prefill", () => {
     const url = new URL(buildPrefillUrl(sample, ["acoustic", "piano", "vocal"]));
     assert.equal(url.searchParams.get("usp"), "pp_url");
     assert.equal(url.searchParams.get("entry.1353476259"), "二、三年級");
-    assert.equal(url.searchParams.get("entry.935150233"), "活潑大方");
+    assert.deepEqual(url.searchParams.getAll("entry.935150233"), ["活潑大方"]);
     assert.equal(url.searchParams.get("entry.1878769903"), "興趣與舒壓");
     assert.equal(url.searchParams.get("entry.1949528208"), "華語流行樂語獨立樂團");
     assert.deepEqual(url.searchParams.getAll("entry.1084453381"), [
@@ -306,6 +371,29 @@ describe("form prefill", () => {
     );
     assert.doesNotMatch(url.toString(), /免費/);
   });
+
+  it("checks every selected personality, reason, and music style", () => {
+    const sample = answers({
+      age: "g46",
+      personality: ["shy", "clever"],
+      hear: "quiet",
+      music: ["classical", "kpop"],
+      reason: ["explore", "relax"],
+      wish: "self",
+      style: "spatial",
+    });
+    const url = new URL(buildPrefillUrl(sample, ["piano", "drums"]));
+    assert.deepEqual(url.searchParams.getAll("entry.935150233"), ["害羞內向", "聰明機智"]);
+    assert.deepEqual(url.searchParams.getAll("entry.1878769903"), [
+      "嘗試與累積多元經驗",
+      "興趣與舒壓",
+    ]);
+    assert.deepEqual(url.searchParams.getAll("entry.1949528208"), [
+      "古典音樂",
+      "Kpop 韓國流行音樂",
+    ]);
+    assert.equal(url.searchParams.get("entry.1353476259"), "四年級到六年級");
+  });
 });
 
 describe("shareable result url", () => {
@@ -320,8 +408,43 @@ describe("shareable result url", () => {
       style: "cool",
     });
     const query = toQuery(sample);
-    const params = Object.fromEntries(new URLSearchParams(query));
-    assert.deepEqual(parseAnswers(params), sample);
+    assert.deepEqual(parseAnswers(paramsFrom(query)), sample);
+  });
+
+  it("round-trips several answers on the same question", () => {
+    const sample = answers({
+      age: "g23",
+      personality: ["lively", "shy"],
+      hear: ["beat", "singalong"],
+      music: ["rock", "kpop"],
+      reason: ["explore", "relax"],
+      wish: ["self", "family"],
+      style: ["cool", "expressive"],
+    });
+    assert.deepEqual(parseAnswers(paramsFrom(toQuery(sample))), sample);
+  });
+
+  it("still reads an older link that stored one answer per question", () => {
+    assert.deepEqual(
+      parseAnswers({
+        a: "g1",
+        p: "clever",
+        h: "dance",
+        m: "kpop",
+        r: "explore",
+        w: "self",
+        s: "cool",
+      }),
+      answers({
+        age: "g1",
+        personality: "clever",
+        hear: "dance",
+        music: "kpop",
+        reason: "explore",
+        wish: "self",
+        style: "cool",
+      }),
+    );
   });
 
   it("rejects a broken link", () => {
